@@ -30,7 +30,7 @@ jobs:
       - name: Write production runtime config
         run: node scripts/write-runtime-config.mjs
         env:
-          APPINGPONG_API_URL: ${{ vars.APPINGPONG_API_URL }}
+          APPINGPONG_API_URL: ${{ vars.APPINGPONG_API_URL || 'https://appingpong-api.appingpong.workers.dev' }}
       - name: Compute GitHub Pages base href
         id: base
         shell: bash
