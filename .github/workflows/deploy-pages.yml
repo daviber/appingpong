@@ -47,6 +47,8 @@ jobs:
         run: npx ng build --configuration production --base-href "${{ steps.base.outputs.base_href }}"
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
