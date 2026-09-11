@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "appingpong-api",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2026-09-11",
+  "vars": {
+    "ALLOWED_ORIGIN": "https://daviber.github.io"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "APPINGPONG_KV",
+      "id": "7cd3ab5793ed4a8e884afbde6fe1f062"
+    }
+  ]
+}

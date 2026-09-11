@@ -1,0 +1,142 @@
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand" aria-label="AppingPong">
+      <img class="brand-logo" src="images/appingpong-logo.png" alt="" width="58" height="58">
+      <div><strong>Apping<span>Pong</span></strong><small>SMALL BALLS. BIG RIVALRY.</small></div>
+    </div>
+    <button class="primary new-series" type="button" (click)="openCreate()"><span aria-hidden="true">＋</span> Nuova serie</button>
+  </header>
+
+  @if (notice()) { <div class="toast" role="status">{{ notice() }}</div> }
+
+  <main>
+    <section class="arena" aria-label="Serie selezionata">
+      <div class="light" aria-hidden="true"></div>
+      @if (loading()) {
+        <div class="loading-card"><span></span><span></span><span></span><p>Caricamento serie…</p></div>
+      } @else if (config.error()) {
+        <div class="empty-state"><p class="eyebrow">CONFIGURAZIONE NON DISPONIBILE</p><h1>Il tabellone non riesce a partire.</h1><p>{{ config.error() }}</p></div>
+      } @else if (selectedSeries(); as selected) {
+        <div class="scoreboard" [class.completed]="completed(selected)">
+          <div class="score-head">
+            <span class="status"><i></i>{{ completed(selected) ? 'SERIE CONCLUSA' : 'SERIE IN CORSO' }}</span>
+            <span class="target">First to {{ selected.targetWins }}</span>
+            <time class="updated-at" [attr.datetime]="selected.updatedAt">Aggiornata {{ updatedLabel(selected.updatedAt) }}</time>
+            <button class="icon-button" type="button" (click)="openEdit()" aria-label="Modifica serie">✎</button>
+          </div>
+
+          <div class="players">
+            <article class="player player-one" [class.winner]="winner(selected) === selected.player1Name">
+              <img src="avatars/player-cyan.jpg" alt="" width="148" height="148">
+              <h2>{{ selected.player1Name }}</h2>
+              <div class="progress"><i [style.width.%]="progress(selected.player1Wins, selected.targetWins)"></i></div>
+              <span>{{ selected.player1Wins }} / {{ selected.targetWins }}</span>
+            </article>
+            <div class="score" aria-label="Punteggio {{ selected.player1Wins }} a {{ selected.player2Wins }}">
+              <strong>{{ selected.player1Wins }}</strong><b>:</b><strong>{{ selected.player2Wins }}</strong>
+            </div>
+            <article class="player player-two" [class.winner]="winner(selected) === selected.player2Name">
+              <img src="avatars/player-orange.jpg" alt="" width="148" height="148">
+              <h2>{{ selected.player2Name }}</h2>
+              <div class="progress"><i [style.width.%]="progress(selected.player2Wins, selected.targetWins)"></i></div>
+              <span>{{ selected.player2Wins }} / {{ selected.targetWins }}</span>
+            </article>
+          </div>
+
+          <blockquote><span aria-hidden="true">◯</span>{{ trashText() }}</blockquote>
+          @if (!completed(selected)) {
+            <p class="remaining">ANCORA {{ selected.targetWins - Math.max(selected.player1Wins, selected.player2Wins) }} VITTORIE PER LA GLORIA</p>
+          } @else { <p class="remaining winner-copy">{{ winner(selected) }} VINCE LA SERIE</p> }
+
+          <div class="table-art" [style.--ball-x]="ballPosition(selected) + '%'" aria-hidden="true">
+            <img src="images/pingpong-table-3d.jpg" alt="">
+            <div class="ball"></div>
+          </div>
+
+          <div class="score-actions">
+            <div class="point-control p1">
+              <button class="minus-button" type="button" [disabled]="busyScore() !== null || selected.player1Wins === 0" (click)="changeWin(1, -1)" [attr.aria-label]="'Togli un punto a ' + selected.player1Name">−1</button>
+              @if (!completed(selected)) {
+                <button class="score-button" type="button" [disabled]="busyScore() !== null" (click)="changeWin(1, 1)">🏓 <strong>+1 {{ selected.player1Name }}</strong></button>
+              }
+            </div>
+            <button class="secondary" type="button" [disabled]="saving() || busyScore() !== null" (click)="openCorrection()">↶ <span>Correggi</span></button>
+            <div class="point-control p2">
+              <button class="minus-button" type="button" [disabled]="busyScore() !== null || selected.player2Wins === 0" (click)="changeWin(2, -1)" [attr.aria-label]="'Togli un punto a ' + selected.player2Name">−1</button>
+              @if (!completed(selected)) {
+                <button class="score-button" type="button" [disabled]="busyScore() !== null" (click)="changeWin(2, 1)">🏓 <strong>+1 {{ selected.player2Name }}</strong></button>
+              }
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="empty-state"><p class="eyebrow">NESSUNA SERIE IN CORSO</p><h1>Il tabellone è troppo tranquillo.</h1><button class="primary" type="button" (click)="openCreate()">Crea la prima serie</button></div>
+      }
+    </section>
+
+    <aside class="series-panel">
+      <div class="panel-head"><div><p class="eyebrow">ARCHIVIO SFIDE</p><h2>Le tue serie</h2></div><span>{{ series().length }}</span></div>
+      <div class="series-list">
+        @for (item of sortedSeries(); track item.id) {
+          <article class="series-item" [class.selected]="item.id === selectedSeriesId()">
+            <button type="button" class="series-select" (click)="select(item)" [attr.aria-label]="'Seleziona serie ' + item.player1Name + ' contro ' + item.player2Name">
+              <span class="mini-paddle" [class.orange]="item.player1Wins >= item.player2Wins" aria-hidden="true">◯</span>
+              <span class="series-copy">
+                <strong>{{ item.player1Name }} <i>vs</i> {{ item.player2Name }}</strong>
+                <small>{{ item.player1Wins }} : {{ item.player2Wins }} / {{ item.targetWins }}</small>
+                <time [attr.datetime]="item.updatedAt">{{ updatedLabel(item.updatedAt) }}</time>
+              </span>
+            </button>
+            <span class="badge" [class.done]="completed(item)">{{ completed(item) ? '✓ Conclusa' : 'In corso' }}</span>
+            <button class="trash" type="button" [attr.aria-label]="'Elimina serie ' + item.player1Name + ' contro ' + item.player2Name" (click)="askDelete(item, $event)">♲</button>
+          </article>
+        } @empty {
+          <div class="list-empty"><span>🏓</span><p>Ancora nessuna serie.</p><small>La rivalità aspetta.</small></div>
+        }
+      </div>
+      @if (series().length) { <p class="total">{{ series().length }} {{ series().length === 1 ? 'serie totale' : 'serie totali' }}</p> }
+      <footer><span>“</span><p>La vita è come il ping pong:<br>a volte schiacci, a volte rispondi.<small>— Saggio del tavolo 3</small></p></footer>
+    </aside>
+  </main>
+</div>
+
+@if (modal()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <section class="modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <button class="modal-close" type="button" (click)="closeModal()" aria-label="Chiudi">×</button>
+      @if (modal() === 'create') {
+        <p class="eyebrow">NUOVA SFIDA</p><h2>Chi entra in campo?</h2>
+        <form (ngSubmit)="create()">
+          <label>Giocatore 1<input name="player1" maxlength="40" required [(ngModel)]="createDraft.player1Name" placeholder="Es. Marco"></label>
+          <label>Giocatore 2<input name="player2" maxlength="40" required [(ngModel)]="createDraft.player2Name" placeholder="Es. Luca"></label>
+          <fieldset><legend>Partite per vincere</legend><div class="target-options">
+            <button type="button" [class.active]="targetMode() === 30" (click)="targetMode.set(30)">30</button>
+            <button type="button" [class.active]="targetMode() === 50" (click)="targetMode.set(50)">50</button>
+            <button type="button" [class.active]="targetMode() === 'custom'" (click)="targetMode.set('custom')">Custom</button>
+          </div></fieldset>
+          @if (targetMode() === 'custom') { <label>Target custom<input name="customTarget" type="number" min="1" max="200" [(ngModel)]="createDraft.customTarget"></label> }
+          <button class="primary submit" type="submit" [disabled]="saving()">{{ saving() ? 'Creazione…' : 'Crea serie' }}</button>
+        </form>
+      } @else if (modal() === 'correct' && selectedSeries(); as selected) {
+        <p class="eyebrow">CORREGGI PUNTEGGIO</p><h2>Rimettiamo ordine.</h2>
+        <form (ngSubmit)="saveCorrection()">
+          <label>{{ selected.player1Name }}<input name="p1score" type="number" min="0" [max]="selected.targetWins" [(ngModel)]="scoreDraft.player1Wins"></label>
+          <label>{{ selected.player2Name }}<input name="p2score" type="number" min="0" [max]="selected.targetWins" [(ngModel)]="scoreDraft.player2Wins"></label>
+          <button class="primary submit" type="submit" [disabled]="saving()">Salva correzione</button>
+        </form>
+      } @else if (modal() === 'edit') {
+        <p class="eyebrow">MODIFICA SERIE</p><h2>Aggiorna la sfida.</h2>
+        <form (ngSubmit)="saveEdit()">
+          <label>Giocatore 1<input name="editP1" maxlength="40" required [(ngModel)]="editDraft.player1Name"></label>
+          <label>Giocatore 2<input name="editP2" maxlength="40" required [(ngModel)]="editDraft.player2Name"></label>
+          <label>Partite per vincere<input name="editTarget" type="number" min="1" max="200" [(ngModel)]="editDraft.targetWins"></label>
+          <button class="primary submit" type="submit" [disabled]="saving()">Salva modifiche</button>
+        </form>
+      } @else if (modal() === 'delete' && selectedSeries(); as selected) {
+        <p class="eyebrow danger">ELIMINA SERIE</p><h2>{{ selected.player1Name }} vs {{ selected.player2Name }}</h2>
+        <p>Questa operazione non può essere annullata.</p>
+        <div class="modal-actions"><button class="secondary" type="button" (click)="closeModal()">Annulla</button><button class="delete-button" type="button" [disabled]="saving()" (click)="deleteSelected()">Elimina</button></div>
+      }
+    </section>
+  </div>
+}
