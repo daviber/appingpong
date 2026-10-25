@@ -716,6 +716,12 @@ Non mettere token nel frontend.
 
 ## 20. Backup dati
 
+### Aggiornamento con storico punti
+
+Pubblicare prima il Worker aggiornato, poi il frontend. Il nuovo campo opzionale `scoreHistory` usa la stessa chiave `appingpong:series:v1`: non servono migrazioni, seed, backfill o reset. I record precedenti restano leggibili; lo storico viene aggiunto alla prima variazione effettiva dei punti, conservando il punteggio precedente come baseline. Nessuna scrittura avviene alla sola lettura.
+
+### Backup
+
 Per il requisito attuale non creare feature UI di backup.
 
 Poiché tutto è in una sola key, un backup occasionale può essere fatto da CLI/dashboard separatamente.

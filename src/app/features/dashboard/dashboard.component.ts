@@ -3,11 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { SeriesApiService } from '../../core/api/series-api.service';
 import { RuntimeConfigService } from '../../core/config/runtime-config.service';
-import { EditableSeries, isCompleted, PingPongSeries, SeriesPatch, validateScores, winnerName } from '../../core/models/series.model';
+import { EditableSeries, getScoreHistory, isCompleted, PingPongSeries, SeriesPatch, validateScores, winnerName } from '../../core/models/series.model';
 import { TrashTalkEngine } from '../../trash-talk/trash-talk.engine';
 import { TrashTalkMemory } from '../../trash-talk/trash-talk.types';
 
-type Modal = 'create' | 'correct' | 'edit' | 'delete' | null;
+type Modal = 'create' | 'correct' | 'edit' | 'delete' | 'history' | null;
 
 @Component({
   selector: 'app-dashboard',
@@ -39,6 +39,11 @@ export class DashboardComponent implements OnInit {
   }));
   readonly selectedSeries = computed(() =>
     this.series().find(series => series.id === this.selectedSeriesId()) ?? null);
+  readonly scoreHistory = computed(() => {
+    const current = this.selectedSeries();
+    return current ? [...getScoreHistory(current)].reverse() : [];
+  });
+  readonly partialHistory = computed(() => this.scoreHistory().some(entry => entry.kind === 'baseline'));
 
   createDraft = { player1Name: '', player2Name: '', customTarget: 10 };
   scoreDraft = { player1Wins: 0, player2Wins: 0 };
@@ -93,7 +98,7 @@ export class DashboardComponent implements OnInit {
     const patch: SeriesPatch = player === 1
       ? { player1Wins: current.player1Wins + delta }
       : { player2Wins: current.player2Wins + delta };
-    const optimistic = { ...current, ...patch, updatedAt: new Date().toISOString() };
+    const optimistic = { ...current, scoreHistory: getScoreHistory(current), ...patch, updatedAt: new Date().toISOString() };
     this.replaceSeries(optimistic);
     this.busyScore.set(player);
     this.api.update(current.id, patch).pipe(finalize(() => this.busyScore.set(null))).subscribe({
@@ -179,6 +184,13 @@ export class DashboardComponent implements OnInit {
     return new Intl.DateTimeFormat('it-IT', {
       day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     }).format(updated);
+  }
+  historyTimestamp(value: string): string {
+    const timestamp = new Date(value);
+    if (Number.isNaN(timestamp.getTime())) return 'Data non disponibile';
+    return new Intl.DateTimeFormat('it-IT', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).format(timestamp);
   }
   ballPosition(series: PingPongSeries): number {
     const relativeLead = (series.player2Wins - series.player1Wins) / series.targetWins;

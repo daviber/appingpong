@@ -4,6 +4,15 @@ import { Observable, map } from 'rxjs';
 import { EditableSeries, PingPongSeries, SeriesPatch } from '../models/series.model';
 import { RuntimeConfigService } from '../config/runtime-config.service';
 
+function validHistoryEntry(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const entry = value as Record<string, unknown>;
+  return typeof entry['timestamp'] === 'string' && Number.isFinite(Date.parse(entry['timestamp'])) &&
+    typeof entry['player1Wins'] === 'number' && Number.isInteger(entry['player1Wins']) && entry['player1Wins'] >= 0 &&
+    typeof entry['player2Wins'] === 'number' && Number.isInteger(entry['player2Wins']) && entry['player2Wins'] >= 0 &&
+    ['initial', 'baseline', 'update'].includes(entry['kind'] as string);
+}
+
 function validSeries(value: unknown): value is PingPongSeries {
   if (!value || typeof value !== 'object') return false;
   const s = value as Record<string, unknown>;
@@ -11,7 +20,8 @@ function validSeries(value: unknown): value is PingPongSeries {
     typeof s['player2Name'] === 'string' && typeof s['targetWins'] === 'number' && Number.isInteger(s['targetWins']) &&
     typeof s['player1Wins'] === 'number' && Number.isInteger(s['player1Wins']) &&
     typeof s['player2Wins'] === 'number' && Number.isInteger(s['player2Wins']) &&
-    typeof s['createdAt'] === 'string' && typeof s['updatedAt'] === 'string';
+    typeof s['createdAt'] === 'string' && typeof s['updatedAt'] === 'string' &&
+    (s['scoreHistory'] === undefined || (Array.isArray(s['scoreHistory']) && s['scoreHistory'].every(validHistoryEntry)));
 }
 
 @Injectable({ providedIn: 'root' })

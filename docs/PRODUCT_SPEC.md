@@ -20,13 +20,18 @@ L'applicazione gestisce **serie lunghe**, tipicamente a 30 o 50 vittorie, ma il 
 
 Una "serie" è un confronto tra due giocatori che termina quando uno dei due raggiunge `targetWins`.
 
-Non vengono salvate le singole partite.
-
-Viene salvato solo il punteggio aggregato.
+Vengono salvati il punteggio aggregato e gli snapshot delle variazioni di punteggio confermate, con timestamp del Worker. Non vengono salvati dettagli delle singole partite.
 
 ### Modello persistito
 
 ```ts
+export interface ScoreHistoryEntry {
+  timestamp: string;
+  player1Wins: number;
+  player2Wins: number;
+  kind: 'initial' | 'baseline' | 'update';
+}
+
 export interface PingPongSeries {
   id: string;
   player1Name: string;
@@ -36,8 +41,22 @@ export interface PingPongSeries {
   player2Wins: number;
   createdAt: string;
   updatedAt: string;
+  scoreHistory?: ScoreHistoryEntry[];
 }
 ```
+
+### Storico punti e compatibilità
+
+- `scoreHistory` è opzionale: i record precedenti restano validi senza migrazioni o reset.
+- Le nuove serie partono da uno snapshot `initial`, punteggio `0 : 0`, timestamp uguale a `createdAt`.
+- Ogni variazione effettiva dei punti, inclusi decrementi e correzioni manuali, aggiunge uno snapshot `update` con entrambi i punteggi e timestamp uguale a `updatedAt` della risposta Worker.
+- Una correzione di entrambi i punteggi produce un solo snapshot. Salvataggi con punteggio invariato e modifiche a nomi/target non creano voci.
+- Alla prima variazione di una serie senza storico, il Worker conserva prima il punteggio precedente come `baseline`, usando il vecchio `updatedAt`, poi aggiunge lo snapshot aggiornato. Il passato non viene ricostruito.
+- Il frontend mostra la stessa baseline anche prima della prima variazione, senza scrivere nello storage, specificando che la data è quella dell'ultimo salvataggio disponibile.
+- Gli snapshot precedenti restano invariati, anche dopo correzioni, riaperture o riduzioni del target. I punteggi storici possono quindi superare il target attuale.
+- Solo il Worker genera lo storico: non è un campo editabile via PATCH. Il frontend usa la risposta della mutazione, senza GET aggiuntivi né voci ottimistiche nello storico.
+- `Storico punti` apre un modal con punteggi e date/ore locali, dal più recente, anche per serie concluse.
+- La chiave KV e gli endpoint rimangono invariati. Non si eseguono migrazioni o riscritture automatiche alla lettura; le scritture restano parte delle sole mutazioni applicative avviate dal proprietario.
 
 ### Campi derivati
 
@@ -78,6 +97,8 @@ Value:
   }
 ]
 ```
+
+Questo esempio senza `scoreHistory` rimane valido; il campo viene aggiunto dal Worker alla successiva variazione di punteggio.
 
 ### Perché una sola chiave
 
@@ -593,7 +614,7 @@ leadRatio > .20                 -> DOMINATION
 
 `COMEBACK` e `ALMOST_TIED` richiedono un minimo di memoria locale della sessione.
 
-Non aggiungere storico backend.
+Le frasi e la memoria dell'engine non entrano nello storico punti backend.
 
 La dashboard può conservare in memoria:
 

@@ -22,6 +22,7 @@
             <span class="status"><i></i>{{ completed(selected) ? 'SERIE CONCLUSA' : 'SERIE IN CORSO' }}</span>
             <span class="target">First to {{ selected.targetWins }}</span>
             <time class="updated-at" [attr.datetime]="selected.updatedAt">Aggiornata {{ updatedLabel(selected.updatedAt) }}</time>
+            <button class="history-button" type="button" (click)="modal.set('history')">Storico punti</button>
             <button class="icon-button" type="button" (click)="openEdit()" aria-label="Modifica serie">✎</button>
           </div>
 
@@ -102,7 +103,7 @@
 
 @if (modal()) {
   <div class="modal-backdrop" (click)="closeModal()">
-    <section class="modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+    <section class="modal" role="dialog" aria-modal="true" [attr.aria-label]="modal() === 'history' ? 'Storico punti' : null" (click)="$event.stopPropagation()">
       <button class="modal-close" type="button" (click)="closeModal()" aria-label="Chiudi">×</button>
       @if (modal() === 'create') {
         <p class="eyebrow">NUOVA SFIDA</p><h2>Chi entra in campo?</h2>
@@ -132,6 +133,24 @@
           <label>Partite per vincere<input name="editTarget" type="number" min="1" max="200" [(ngModel)]="editDraft.targetWins"></label>
           <button class="primary submit" type="submit" [disabled]="saving()">Salva modifiche</button>
         </form>
+      } @else if (modal() === 'history' && selectedSeries(); as selected) {
+        <p class="eyebrow">STORICO PUNTI</p><h2>Il percorso della sfida.</h2>
+        <p class="history-players"><span>{{ selected.player1Name }}</span> vs <span>{{ selected.player2Name }}</span></p>
+        @if (partialHistory()) {
+          <p class="history-note">Le modifiche precedenti non sono disponibili. La voce «Punteggio già salvato» riporta il punteggio e la data dell'ultimo salvataggio precedente allo storico.</p>
+        }
+        <p class="history-order">Dal più recente · Orari locali</p>
+        <ol class="score-history">
+          @for (entry of scoreHistory(); track $index) {
+            <li>
+              <div>
+                <strong>{{ entry.kind === 'initial' ? 'Inizio serie' : entry.kind === 'baseline' ? 'Punteggio già salvato' : 'Aggiornamento punteggio' }}</strong>
+                <time [attr.datetime]="entry.timestamp">{{ historyTimestamp(entry.timestamp) }}</time>
+              </div>
+              <span class="history-score" [attr.aria-label]="selected.player1Name + ' ' + entry.player1Wins + ', ' + selected.player2Name + ' ' + entry.player2Wins"><b>{{ entry.player1Wins }}</b> : <b>{{ entry.player2Wins }}</b></span>
+            </li>
+          }
+        </ol>
       } @else if (modal() === 'delete' && selectedSeries(); as selected) {
         <p class="eyebrow danger">ELIMINA SERIE</p><h2>{{ selected.player1Name }} vs {{ selected.player2Name }}</h2>
         <p>Questa operazione non può essere annullata.</p>

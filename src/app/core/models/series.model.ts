@@ -1,3 +1,10 @@
+export interface ScoreHistoryEntry {
+  timestamp: string;
+  player1Wins: number;
+  player2Wins: number;
+  kind: 'initial' | 'baseline' | 'update';
+}
+
 export interface PingPongSeries {
   id: string;
   player1Name: string;
@@ -7,10 +14,21 @@ export interface PingPongSeries {
   player2Wins: number;
   createdAt: string;
   updatedAt: string;
+  scoreHistory?: ScoreHistoryEntry[];
 }
 
 export type EditableSeries = Pick<PingPongSeries, 'player1Name' | 'player2Name' | 'targetWins'>;
 export type SeriesPatch = Partial<Pick<PingPongSeries, 'player1Name' | 'player2Name' | 'targetWins' | 'player1Wins' | 'player2Wins'>>;
+
+export function getScoreHistory(series: PingPongSeries): ScoreHistoryEntry[] {
+  if (series.scoreHistory?.length) return series.scoreHistory;
+  return [{
+    timestamp: series.updatedAt,
+    player1Wins: series.player1Wins,
+    player2Wins: series.player2Wins,
+    kind: 'baseline',
+  }];
+}
 
 export const isCompleted = (series: PingPongSeries): boolean =>
   series.player1Wins >= series.targetWins || series.player2Wins >= series.targetWins;

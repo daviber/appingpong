@@ -1,3 +1,10 @@
+export interface ScoreHistoryEntry {
+  timestamp: string;
+  player1Wins: number;
+  player2Wins: number;
+  kind: 'initial' | 'baseline' | 'update';
+}
+
 export interface StoredSeries {
   id: string;
   player1Name: string;
@@ -7,6 +14,7 @@ export interface StoredSeries {
   player2Wins: number;
   createdAt: string;
   updatedAt: string;
+  scoreHistory?: ScoreHistoryEntry[];
 }
 
 export type SeriesInput = Partial<Pick<StoredSeries, 'player1Name' | 'player2Name' | 'targetWins' | 'player1Wins' | 'player2Wins'>>;
@@ -40,6 +48,7 @@ export function createSeries(input: SeriesInput, now = new Date().toISOString(),
     player2Wins: 0,
     createdAt: now,
     updatedAt: now,
+    scoreHistory: [{ timestamp: now, player1Wins: 0, player2Wins: 0, kind: 'initial' }],
   };
 }
 
@@ -56,13 +65,23 @@ export function updateSeries(current: StoredSeries, patch: SeriesInput, now = ne
   if (wasCompleted && (player1Wins > current.player1Wins || player2Wins > current.player2Wins)) {
     throw new ApiError(400, 'VALIDATION_ERROR', 'A completed series can only be corrected downwards');
   }
+  const player1Name = patch.player1Name === undefined ? current.player1Name : name(patch.player1Name, 'player1Name');
+  const player2Name = patch.player2Name === undefined ? current.player2Name : name(patch.player2Name, 'player2Name');
+  const scoreChanged = player1Wins !== current.player1Wins || player2Wins !== current.player2Wins;
+  const scoreHistory: ScoreHistoryEntry[] = current.scoreHistory?.length ? current.scoreHistory : [{
+    timestamp: current.updatedAt,
+    player1Wins: current.player1Wins,
+    player2Wins: current.player2Wins,
+    kind: 'baseline',
+  }];
   return {
     ...current,
-    player1Name: patch.player1Name === undefined ? current.player1Name : name(patch.player1Name, 'player1Name'),
-    player2Name: patch.player2Name === undefined ? current.player2Name : name(patch.player2Name, 'player2Name'),
+    player1Name,
+    player2Name,
     targetWins,
     player1Wins,
     player2Wins,
     updatedAt: now,
+    ...(scoreChanged ? { scoreHistory: [...scoreHistory, { timestamp: now, player1Wins, player2Wins, kind: 'update' as const }] } : {}),
   };
 }
