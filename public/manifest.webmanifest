@@ -1,0 +1,23 @@
+{
+  "name": "AppingPong",
+  "short_name": "AppingPong",
+  "lang": "it",
+  "description": "Scoreboard per serie di ping pong tra colleghi.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050a11",
+  "theme_color": "#050a11",
+  "icons": [
+    {
+      "src": "icons/appingpong-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/appingpong-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
